@@ -68,10 +68,13 @@ vm_species_init(struct gkyl_vm *vm, struct gkyl_vlasov_app *app, struct vm_speci
   s->f = mkarr(app->use_gpu, app->basis.num_basis, s->local_ext.volume);
   s->f1 = mkarr(app->use_gpu, app->basis.num_basis, s->local_ext.volume);
   s->fnew = mkarr(app->use_gpu, app->basis.num_basis, s->local_ext.volume);
+  s->coll_rhs = mkarr(app->use_gpu, app->basis.num_basis, s->local_ext.volume);
 
   s->f_host = s->f;
   if (app->use_gpu)
     s->f_host = mkarr(false, app->basis.num_basis, s->local_ext.volume);
+
+  gkyl_array_clear(s->coll_rhs, 0.0);
 
   // allocate cflrate (scalar array)
   s->cflrate = mkarr(app->use_gpu, 1, s->local_ext.volume);
@@ -474,6 +477,7 @@ vm_species_rhs(gkyl_vlasov_app *app, struct vm_species *species,
 {
   gkyl_array_clear(species->cflrate, 0.0);
   gkyl_array_clear(rhs, 0.0);
+  gkyl_array_clear(species->coll_rhs, 0.0);
 
   if (species->field_id  == GKYL_FIELD_NULL || species->field_id  == GKYL_FIELD_E_B) {
     if (species->field_id  == GKYL_FIELD_E_B) {
@@ -509,11 +513,13 @@ vm_species_rhs(gkyl_vlasov_app *app, struct vm_species *species,
   }
 
   if (species->collision_id == GKYL_LBO_COLLISIONS) {
-    vm_species_lbo_rhs(app, species, &species->lbo, fin, rhs);
+    vm_species_lbo_rhs(app, species, &species->lbo, fin, species->coll_rhs);
+    gkyl_array_accumulate(rhs, 1.0, species->coll_rhs);
   }
   else if (species->collision_id == GKYL_BGK_COLLISIONS && !app->has_implicit_coll_scheme) {
     species->bgk.implicit_step = false;
-    vm_species_bgk_rhs(app, species, &species->bgk, fin, rhs);
+    vm_species_bgk_rhs(app, species, &species->bgk, fin, species->coll_rhs);
+    gkyl_array_accumulate(rhs, 1.0, species->coll_rhs);
   }
 
   if (species->calc_bflux) {
@@ -550,9 +556,11 @@ vm_species_rhs_implicit(gkyl_vlasov_app *app, struct vm_species *species,
 
   gkyl_array_clear(species->cflrate, 0.0);
   gkyl_array_clear(rhs, 0.0);
+  gkyl_array_clear(species->coll_rhs, 0.0);
 
   if (species->collision_id == GKYL_BGK_COLLISIONS) {
-    vm_species_bgk_rhs(app, species, &species->bgk, fin, rhs);
+    vm_species_bgk_rhs(app, species, &species->bgk, fin, species->coll_rhs);
+    gkyl_array_accumulate(rhs, 1.0, species->coll_rhs);
   }
 
   if (species->calc_bflux) {
@@ -646,7 +654,7 @@ vm_species_apply_bc(gkyl_vlasov_app *app, const struct vm_species *species, stru
 void
 vm_species_calc_L2(gkyl_vlasov_app *app, double tm, const struct vm_species *species)
 {
-  gkyl_dg_calc_l2_range(&app->basis, 0, species->L2_f, 0, species->f, species->local);
+  gkyl_dg_calc_l2_range(app->basis, 0, species->L2_f, 0, species->f, species->local);
   gkyl_array_scale_range(species->L2_f, species->grid.cellVolume, &species->local);
   
   double L2[1] = { 0.0 };
@@ -722,6 +730,7 @@ vm_species_release(const gkyl_vlasov_app* app, const struct vm_species *s)
   gkyl_array_release(s->f);
   gkyl_array_release(s->f1);
   gkyl_array_release(s->fnew);
+  gkyl_array_release(s->coll_rhs);
   gkyl_array_release(s->cflrate);
   gkyl_array_release(s->bc_buffer);
   gkyl_array_release(s->bc_buffer_lo_fixed);

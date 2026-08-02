@@ -333,6 +333,7 @@ struct vm_species {
   struct gkyl_range local_vel, local_ext_vel; // local, local-ext velocity-space ranges
 
   struct gkyl_array *f, *f1, *fnew; // arrays for updates
+  struct gkyl_array *coll_rhs; // output array for df/dt due to collisions
   struct gkyl_array *cflrate; // CFL rate in each cell
   struct gkyl_array *bc_buffer; // buffer for BCs (used by bc_basic)
   struct gkyl_array *bc_buffer_lo_fixed, *bc_buffer_up_fixed; // fixed buffers for time independent BCs 
@@ -396,6 +397,8 @@ struct vm_species {
   // Pointers to updaters that apply BC.
   struct gkyl_bc_basic *bc_lo[3];
   struct gkyl_bc_basic *bc_up[3];
+  gkyl_proj_on_basis *bc_fixed_proj_lo[3];
+  gkyl_proj_on_basis *bc_fixed_proj_up[3];
   // To simplify BC application, store local skin and ghost ranges
   struct gkyl_range lower_skin[GKYL_MAX_DIM];
   struct gkyl_range lower_ghost[GKYL_MAX_DIM];

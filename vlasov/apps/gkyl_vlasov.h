@@ -183,6 +183,7 @@ struct gkyl_vlasov_species {
   void (*det_h)(double t, const double *xn, double *aout, void *ctx);
 
   bool output_f_lte; // Boolean for writing out f_lte (used for calculating transport coeff.)
+  bool output_coll_dfdt; // Boolean for writing out df/dt due to collisions.
   double iter_eps; // error tolerance for moment fixes of f_lte (density is always exact)
   int max_iter; // maximum number of iterations for correction output f_lte
   bool use_last_converged; // use last iteration value regardless of convergence for f_lte?

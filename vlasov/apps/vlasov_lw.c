@@ -359,6 +359,7 @@ struct vlasov_species_lw {
   struct lua_func_ctx metric_determinant_func_ref; // Lua registry reference to metric determinant function.
 
   bool output_f_lte; // Should f_lte be written out (for calculating transport coefficients)?
+  bool output_coll_dfdt; // Should df/dt due to collisions be written out?
 
   int num_init; // Number of projection objects.
   enum gkyl_projection_id proj_id[GKYL_MAX_PROJ]; // Projection type.
@@ -527,6 +528,7 @@ vlasov_species_lw_new(lua_State *L)
   }
 
   bool output_f_lte = glua_tbl_get_bool(L, "outputfLTE", false);
+  bool output_coll_dfdt = glua_tbl_get_bool(L, "outputCollDfDt", false);
   
   enum gkyl_projection_id proj_id[GKYL_MAX_PROJ];
 
@@ -749,6 +751,7 @@ vlasov_species_lw_new(lua_State *L)
   };
 
   vms_lw->output_f_lte = output_f_lte;
+  vms_lw->output_coll_dfdt = output_coll_dfdt;
 
   vms_lw->num_init = num_init;
   for (int i = 0; i < num_init; i++) {
@@ -1263,6 +1266,7 @@ struct vlasov_app_lw {
   struct lua_func_ctx metric_determinant_func_ctx[GKYL_MAX_SPECIES]; // Lua registry reference to metric determinant function.
 
   bool output_f_lte[GKYL_MAX_SPECIES]; // Should f_lte be written out (for calculating transport coefficients)?
+  bool output_coll_dfdt[GKYL_MAX_SPECIES]; // Should collision-only df/dt be written out?
 
   int num_init[GKYL_MAX_SPECIES]; // Number of projection objects.
   enum gkyl_projection_id proj_id[GKYL_MAX_SPECIES][GKYL_MAX_PROJ]; // Projection type.
@@ -1714,6 +1718,7 @@ vm_app_new(lua_State *L)
     }
 
     app_lw->output_f_lte[s] = species[s]->output_f_lte;
+    app_lw->output_coll_dfdt[s] = species[s]->output_coll_dfdt;
 
     app_lw->num_init[s] = species[s]->num_init;
     for (int i = 0; i < app_lw->num_init[s]; i++) {
@@ -1738,6 +1743,7 @@ vm_app_new(lua_State *L)
     }
 
     vm.species[s].output_f_lte = app_lw->output_f_lte[s];
+    vm.species[s].output_coll_dfdt = app_lw->output_coll_dfdt[s];
 
     vm.species[s].num_init = app_lw->num_init[s];
     for (int i = 0; i < app_lw->num_init[s]; i++) {
@@ -2487,7 +2493,7 @@ vm_app_run(lua_State *L)
   int integrated_mom_calcs = app_lw->integrated_mom_calcs;
   int integrated_L2_f_calcs = app_lw->integrated_L2_f_calcs;
   // Triggers for IO and logging.
-  struct gkyl_tm_trigger io_trig = { .dt = t_end / num_frames, .tcurr = frame_curr * (t_end / num_frames), .curr = frame_curr };
+  struct gkyl_tm_trigger io_trig = { .dt = t_end / num_frames, .tcurr = t_curr, .curr = frame_curr };
   struct gkyl_tm_trigger fe_trig = { .dt = t_end / field_energy_calcs, .tcurr = t_curr, .curr = frame_curr };
   struct gkyl_tm_trigger im_trig = { .dt = t_end / integrated_mom_calcs, .tcurr = t_curr, .curr = frame_curr };
   struct gkyl_tm_trigger l2f_trig = { .dt = t_end / integrated_L2_f_calcs, .tcurr = t_curr, .curr = frame_curr };

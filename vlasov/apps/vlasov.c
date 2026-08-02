@@ -14,6 +14,8 @@
 
 #include <mpack.h>
 
+void gkyl_vlasov_app_write_species_coll_dfdt(gkyl_vlasov_app* app, int sidx, double tm, int frame);
+
 // returned gkyl_array_meta must be freed using vlasov_array_meta_release
 struct gkyl_msgpack_data*
 vlasov_array_meta_new(struct vlasov_output_meta meta)
@@ -607,6 +609,7 @@ gkyl_vlasov_app_write(gkyl_vlasov_app* app, double tm, int frame)
     gkyl_vlasov_app_write_field(app, tm, frame);
   for (int i=0; i<app->num_species; ++i) {
     gkyl_vlasov_app_write_species(app, i, tm, frame);
+    gkyl_vlasov_app_write_species_coll_dfdt(app, i, tm, frame);
     if (app->species[i].info.output_f_lte) {
       gkyl_vlasov_app_write_species_lte(app, i, tm, frame);
     }
@@ -742,6 +745,40 @@ gkyl_vlasov_app_write_species(gkyl_vlasov_app* app, int sidx, double tm, int fra
     vm_species_emission_write(app, vm_s, &vm_s->bc_emission_up, mt, frame);
 
   vlasov_array_meta_release(mt);  
+}
+
+void
+gkyl_vlasov_app_write_species_coll_dfdt(gkyl_vlasov_app* app, int sidx, double tm, int frame)
+{
+  struct vm_species *vm_s = &app->species[sidx];
+
+  if (!vm_s->info.output_coll_dfdt || vm_s->collision_id == GKYL_NO_COLLISIONS)
+    return;
+
+  struct gkyl_msgpack_data *mt = vlasov_array_meta_new((struct vlasov_output_meta) {
+      .frame = frame,
+      .stime = tm,
+      .poly_order = app->poly_order,
+      .basis_type = app->basis.id
+    }
+  );
+
+  const char *fmt = "%s-%s_%d_coll_dfdt.gkyl";
+  int sz = gkyl_calc_strlen(fmt, app->name, vm_s->info.name, frame);
+  char fileNm[sz+1]; // ensures no buffer overflow
+  snprintf(fileNm, sizeof fileNm, fmt, app->name, vm_s->info.name, frame);
+
+  if (app->use_gpu) {
+    gkyl_array_copy(vm_s->f_host, vm_s->coll_rhs);
+    gkyl_comm_array_write(vm_s->comm, &vm_s->grid, &vm_s->local,
+      mt, vm_s->f_host, fileNm);
+  }
+  else {
+    gkyl_comm_array_write(vm_s->comm, &vm_s->grid, &vm_s->local,
+      mt, vm_s->coll_rhs, fileNm);
+  }
+
+  vlasov_array_meta_release(mt);
 }
 
 void
