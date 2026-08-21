@@ -397,8 +397,6 @@ struct vm_species {
   // Pointers to updaters that apply BC.
   struct gkyl_bc_basic *bc_lo[3];
   struct gkyl_bc_basic *bc_up[3];
-  gkyl_proj_on_basis *bc_fixed_proj_lo[3];
-  gkyl_proj_on_basis *bc_fixed_proj_up[3];
   // To simplify BC application, store local skin and ghost ranges
   struct gkyl_range lower_skin[GKYL_MAX_DIM];
   struct gkyl_range lower_ghost[GKYL_MAX_DIM];
