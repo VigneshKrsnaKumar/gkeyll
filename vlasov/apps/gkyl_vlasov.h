@@ -544,6 +544,16 @@ void gkyl_vlasov_app_write_field(gkyl_vlasov_app* app, double tm, int frame);
 void gkyl_vlasov_app_write_species(gkyl_vlasov_app* app, int sidx, double tm, int frame);
 
 /**
+ * Write species data to file - for df/dt due to collisions.
+ * 
+ * @param app App object.
+ * @param sidx Index of species to initialize.
+ * @param tm Time-stamp
+ * @param frame Frame number
+ */
+void gkyl_vlasov_app_write_species_coll_dfdt(gkyl_vlasov_app* app, int sidx, double tm, int frame);
+
+/**
  * Write species data to file - for the local equilbrium.
  * 
  * @param app App object.
