@@ -763,7 +763,7 @@ gkyl_vlasov_app_write_species_coll_dfdt(gkyl_vlasov_app* app, int sidx, double t
     }
   );
 
-  const char *fmt = "%s-%s_%d_coll_dfdt.gkyl";
+  const char *fmt = "%s-%s_dfdtC_%d.gkyl";
   int sz = gkyl_calc_strlen(fmt, app->name, vm_s->info.name, frame);
   char fileNm[sz+1]; // ensures no buffer overflow
   snprintf(fileNm, sizeof fileNm, fmt, app->name, vm_s->info.name, frame);
