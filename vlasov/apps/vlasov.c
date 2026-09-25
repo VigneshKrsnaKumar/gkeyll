@@ -766,13 +766,28 @@ gkyl_vlasov_app_write_species_coll_dfdt(gkyl_vlasov_app* app, int sidx, double t
   char fileNm[sz+1]; // ensures no buffer overflow
   snprintf(fileNm, sizeof fileNm, fmt, app->name, vm_s->info.name, frame);
 
+  // Recalculate moments and collisional RHS using f after RK3 step
+  gkyl_array_clear(vm_s->coll_rhs, 0.0);
+  
+  if (vm_s->collision_id == GKYL_LBO_COLLISIONS) {
+    vm_species_lbo_moms(app, vm_s, &vm_s->lbo, vm_s->f);
+    if (vm_s->lbo.num_cross_collisions) {
+      vm_species_lbo_cross_moms(app, vm_s, &vm_s->lbo, vm_s->f);
+    }
+    vm_species_lbo_rhs(app, vm_s, &vm_s->lbo, vm_s->f, vm_s->coll_rhs);
+  }
+  else if (vm_s->collision_id == GKYL_BGK_COLLISIONS) {
+    vm_species_bgk_moms(app, vm_s, &vm_s->bgk, vm_s->f);
+    vm_species_bgk_rhs(app, vm_s, &vm_s->bgk, vm_s->f, vm_s->coll_rhs);
+  }
+
   if (app->use_gpu) {
     gkyl_array_copy(vm_s->f_host, vm_s->coll_rhs);
-    gkyl_comm_array_write(vm_s->comm, &vm_s->grid, &vm_s->local,
+    gkyl_comm_array_write(vm_s->comm, &vm_s->grid, &vm_s->local, 
       mt, vm_s->f_host, fileNm);
   }
   else {
-    gkyl_comm_array_write(vm_s->comm, &vm_s->grid, &vm_s->local,
+    gkyl_comm_array_write(vm_s->comm, &vm_s->grid, &vm_s->local, 
       mt, vm_s->coll_rhs, fileNm);
   }
 
